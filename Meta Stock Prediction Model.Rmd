@@ -1,0 +1,266 @@
+---
+title: "Final Project"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+# set working directory and upload dataset
+setwd("/Users/thego/Downloads/RS/Data/")
+getwd()
+
+list.files()
+my_data <- read.csv("FB.csv")
+View(my_data)
+print(my_data)
+```
+
+
+```{r}
+library(tidyverse)
+
+# Handling Missing Values (if any)
+my_data <- na.omit(my_data)
+
+# Check if there are any missing values after handling missing values
+if (anyNA(my_data)) {
+  print("Warning: Missing values still present after handling.")
+}
+
+# Addressing Outliers using IQR method
+address_outliers <- function(data, column_names, threshold = 1.5) {
+  for (col_name in column_names) {
+    # Calculate Q1 and Q3
+    q1 <- quantile(data[[col_name]], 0.25, na.rm = TRUE)
+    q3 <- quantile(data[[col_name]], 0.75, na.rm = TRUE)
+    
+    # Calculate the IQR
+    iqr <- q3 - q1
+    
+    # Calculate lower and upper bounds
+    lower_bound <- q1 - threshold * iqr
+    upper_bound <- q3 + threshold * iqr
+    
+    # Replace outliers with the lower or upper bound
+    data[[col_name]] <- pmin(pmax(data[[col_name]], lower_bound), upper_bound)
+  }
+  return(data)
+}
+
+# List of numeric columns (Open, High, Low, Close, Adj.Close, and Volume)
+numeric_columns <- c("Open", "High", "Low", "Close", "Adj.Close", "Volume")
+
+# Apply the function to address outliers in the numeric columns
+my_data <- address_outliers(my_data, numeric_columns)
+
+# Print the preprocessed data
+print(my_data)
+```
+
+
+```{r}
+# Summary statistics of numeric columns
+summary_stats <- summary(my_data[, c("Open", "High", "Low", "Close", "Adj.Close", "Volume")])
+print(summary_stats)
+
+# Correlation matrix
+cor_matrix <- cor(my_data[, c("Open", "High", "Low", "Close", "Adj.Close", "Volume")])
+print(cor_matrix)
+
+# Pairwise scatter plot
+scatter_plot <- ggplot(my_data, aes(x = Open, y = Close)) +
+  geom_point() +
+  labs(x = "Open", y = "Close") +
+  theme_minimal()
+print(scatter_plot)
+```
+
+
+```{r}
+library(tidyverse)
+library(TTR)
+library(caret)  # For model training and evaluation
+
+# Create the pairwise scatterplot
+scatter_plot <- ggplot(my_data, aes(x = Open, y = Close)) +
+  geom_point() +
+  labs(x = "Open", y = "Close") +
+  theme_minimal()
+print(scatter_plot)
+
+# Model Selection
+set.seed(42)
+
+# Define the training control for model evaluation
+train_control <- trainControl(method = "cv", number = 5)
+
+# Create the candidate models
+models <- list(
+  Linear_Regression = train(Close ~ Open, data = my_data, method = "lm", trControl = train_control),
+  Decision_Tree = train(Close ~ Open, data = my_data, method = "rpart", trControl = train_control),
+  Random_Forest = train(Close ~ Open, data = my_data, method = "rf", trControl = train_control)
+)
+
+# Evaluate the models and compare their performance
+model_results <- resamples(models)
+
+# Print the model performance metrics
+summary(model_results)
+
+# Extract the RMSE values from the models
+rmse_values <- sapply(models, function(model) min(model$results$RMSE))
+
+# Find the model with the lowest RMSE value
+best_model_name <- names(rmse_values)[which.min(rmse_values)]
+best_model <- models[[best_model_name]]
+
+# Print the best model
+print(best_model)
+```
+
+
+```{r}
+# Training
+set.seed(42)
+
+# Define the training control for model evaluation
+train_control <- trainControl(method = "cv", number = 5)
+
+# Create the candidate models
+models <- list(
+  Linear_Regression = train(Close ~ Open, data = my_data, method = "lm", trControl = train_control),
+  Decision_Tree = train(Close ~ Open, data = my_data, method = "rpart", trControl = train_control),
+  Random_Forest = train(Close ~ Open, data = my_data, method = "rf", trControl = train_control)
+)
+
+# Evaluate the models and compare their performance
+model_results <- resamples(models)
+
+# Extract the RMSE values from the models
+rmse_values <- sapply(models, function(model) min(model$results$RMSE))
+
+# Find the model with the lowest RMSE value
+best_model_name <- names(rmse_values)[which.min(rmse_values)]
+best_model <- models[[best_model_name]]
+
+# Print the best model
+print(best_model)
+
+# Train the best model (Linear Regression) on the full dataset
+best_model_fit <- lm(Close ~ Open, data = my_data)
+
+# Summary of the model
+summary(best_model_fit)
+```
+
+
+```{r}
+# Evaluation
+set.seed(42)
+
+# Define the training control for model evaluation using K-Fold Cross-Validation (K=5)
+train_control <- trainControl(method = "cv", number = 5)
+
+# Create the candidate models
+models <- list(
+  Linear_Regression = train(Close ~ Open, data = my_data, method = "lm", trControl = train_control),
+  Decision_Tree = train(Close ~ Open, data = my_data, method = "rpart", trControl = train_control),
+  Random_Forest = train(Close ~ Open, data = my_data, method = "rf", trControl = train_control)
+)
+
+# Evaluate the models and compare their performance
+model_results <- resamples(models)
+
+# Print the model performance metrics (MAE, RMSE, R²)
+summary(model_results)
+
+# Extract the RMSE values from the models
+rmse_values <- sapply(models, function(model) min(model$results$RMSE))
+
+# Find the model with the lowest RMSE value
+best_model_name <- names(rmse_values)[which.min(rmse_values)]
+best_model <- models[[best_model_name]]
+
+# Print the best model
+print(best_model)
+
+# Train the best model (Linear Regression) on the full dataset
+best_model_fit <- lm(Close ~ Open, data = my_data)
+
+# Summary of the model
+summary(best_model_fit)
+```
+
+
+```{r}
+# ignore the troubleshooting below: 
+library(tidyverse)
+library(TTR)
+library(caret)
+library(rpart)
+# ^^^
+
+# Tuning
+set.seed(42)
+
+# Define the training control for model evaluation using K-Fold Cross-Validation (K=5)
+train_control <- trainControl(method = "cv", number = 5)
+
+# Create the candidate models
+models <- list(
+  Decision_Tree = train(Close ~ Open, data = my_data, method = "rpart", trControl = train_control),
+  Random_Forest = train(Close ~ Open, data = my_data, method = "rf", trControl = train_control)
+)
+
+# Evaluate the models and compare their performance
+model_results <- resamples(models)
+
+# Print the model performance metrics (MAE, RMSE, R²)
+summary(model_results)
+
+# Extract the RMSE values from the models
+rmse_values <- sapply(models, function(model) min(model$results$RMSE))
+
+# Find the model with the lowest RMSE value
+best_model_name <- names(rmse_values)[which.min(rmse_values)]
+best_model <- models[[best_model_name]]
+
+# Print the best model
+print(best_model)
+
+# Model Tuning for Decision Tree
+tune_decision_tree <- train(
+  Close ~ Open,
+  data = my_data,
+  method = "rpart",
+  trControl = train_control,
+  tuneLength = 10,  # Number of hyperparameter values to try
+  control = rpart.control(minsplit = 5)  # Set minimum split size hyperparameter
+)
+
+# Print the tuned Decision Tree model
+print(tune_decision_tree)
+
+# Model Tuning for Random Forest
+tune_random_forest <- train(
+  Close ~ Open,
+  data = my_data,
+  method = "rf",
+  trControl = train_control,
+  tuneLength = 10,  # Number of hyperparameter values to try
+  ntree = 100  # Set number of trees hyperparameter
+)
+
+# Print the tuned Random Forest model
+print(tune_random_forest)
+```
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
